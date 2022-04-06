@@ -1,69 +1,115 @@
 const routesToRemove = [
-  "category___",
-  "Category___",
-
-  "checkout___",
-  "Checkout___",
-
-  "home___",
-  "Home___",
-
-  "product___",
-  "Product___",
-
-  "products___",
-  "Products___",
-
-  "MyAccount___",
-  "my-account___",
-
-  "reset-password___",
-  "ResetPassword___",
+  // add here name of the routes you want to remove
 ];
-const pathsToReplace = [
+const modsUrlsAndNames = [
+  ////////EXPLANATION////////
+  // {
+  //   oldName: "foo",
+  //   newName: "bar",
+  // }
+  // or URL path you want to change
+  // {
+  //   oldPath: "foo",
+  //   newPath: "bar",
+  // }
+  /////////////////
+
+  {
+    oldName: "category___de",
+    newName: "products___de",
+  },
+  {
+    oldName: "category___en",
+    newName: "products___en",
+  },
   {
     oldPath: "/p/:id/:slug",
     newPath: "/product/:id/:slug",
   },
   {
-    oldPath: "/de/c/:slug_1/:slug_2?/:slug_3?/:slug_4?/:slug_5?",
-    newPath: "/categories/:slug_1/:slug_2?/:slug_3?/:slug_4?/:slug_5?",
+    oldPath: "/c/:slug_1/:slug_2?/:slug_3?/:slug_4?/:slug_5?",
+    newPath: "/products/:slug_1/:slug_2?/:slug_3?/:slug_4?/:slug_5?",
+  },
+];
+
+const modsComponentsPaths = [
+  ////////EXPLANATION////////
+  // {
+  //   component: "the rout name you want to change",
+  //   newName: "the relative path of the new component",
+  // }
+  /////////////////
+  {
+    component: "Category",
+    path: "../pages/Products.vue",
   },
   {
-    oldPath: "/c/:slug_1/:slug_2?/:slug_3?/:slug_4?/:slug_5?",
-    newPath: "/categories/:slug_1/:slug_2?/:slug_3?/:slug_4?/:slug_5?",
+    component: "category",
+    path: "../pages/Products.vue",
   },
 ];
 
 export default function () {
-  this.extendRoutes((routes) => {
-    console.log("routes", routes);
+  this.extendRoutes((routes, resolve) => {
     let newRoutes = [];
+    newRoutes = removeRoutes(routes, routesToRemove);
+    newRoutes = changeComponentPath({
+      currentRoutes: newRoutes,
+      routesToModify: modsComponentsPaths,
+      resolve,
+    });
+    newRoutes = routesModifier({
+      currentRoutes: newRoutes,
+      routesToModify: modsUrlsAndNames,
+      propertyToModify: "path",
+    });
+    newRoutes = routesModifier({
+      currentRoutes: newRoutes,
+      routesToModify: modsUrlsAndNames,
+      propertyToModify: "name",
+    });
 
-    newRoutes = [...removeRoutes(routes)];
-
-    console.log("");
-    console.log("");
-    console.log("");
-    console.log("");
-
-    console.log("newRoutes", newRoutes);
+    return newRoutes;
   });
 }
 
-function removeRoutes(routes) {
-  return routes.filter(({ name }) => {
-    return !routesToRemove.some((routeName) => name.includes(routeName));
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export function removeRoutes(routes = [], routesToRemove = []) {
+  const newRoutes = routes.filter((route) => {
+    return !routesToRemove.some((routeName) => route.name.includes(routeName));
   });
+  return newRoutes;
 }
 
-function routesModifier(
-  currentRoute = [],
+function changeComponentPath({
+  currentRoutes = [],
   routesToModify = [],
-  propertyToModify = "name"
-) {
+  resolve,
+}) {
+  return currentRoutes.map((route) => {
+    const filtering = routesToModify.filter((mod) =>
+      route.component.includes(mod.component)
+    );
+
+    if (filtering.length > 0) {
+      const path = filtering[0].path;
+
+      route.component = resolve(__dirname, path);
+    }
+    return route;
+  });
+}
+
+function routesModifier({
+  currentRoutes = [],
+  routesToModify = [],
+  propertyToModify = "name",
+}) {
   let name = cap(propertyToModify);
-  return currentRoute.map((route) => {
+
+  return currentRoutes.map((route) => {
     const modsToReplace = routesToModify.filter((mod) => {
       return route[propertyToModify].includes(mod[`old${name}`]);
     });
@@ -86,17 +132,3 @@ function routesModifier(
     return string.charAt(0).toUpperCase() + string.slice(1);
   }
 }
-
-// const newRoutes =
-//   .map((route) => {
-//     const pathToReplace = pathsToReplace.find(({ oldPath }) => {
-//       return route.path.includes(oldPath);
-//     });
-
-//     if (pathToReplace) {
-//       const { oldPath, newPath } = pathToReplace;
-
-//       return { ...route, path: route.path.replace(oldPath, newPath) };
-//     }
-//     return route;
-//   });
